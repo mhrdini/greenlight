@@ -1,6 +1,6 @@
 root = "./cmd/api/"
 testdata_dir = "testdata"
-tmp_dir = "tmp"
+tmp_dir = "./cmd/api/tmp"
 
 [build]
   args_bin = []
