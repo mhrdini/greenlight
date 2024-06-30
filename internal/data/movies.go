@@ -1,8 +1,10 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/mhrdini/greenlight/internal/validator"
 )
 
@@ -16,8 +18,13 @@ type Movie struct {
 	Version   int32     `json:"version"` // starts at 1 and increments at every update of the movie
 }
 
-// could also do MarshalJSON() ([]byte, error) here but might lose control of field order
+type MovieModel struct {
+	DB *sql.DB
+}
 
+type MockMovieModel struct{}
+
+// could also do MarshalJSON() ([]byte, error) here but might lose control of field order
 func (m *Movie) Validate(v *validator.Validator) {
 	v.Check(m.Title != "", "title", "must be provided")
 	v.Check(len(m.Title) <= 500, "title", "must not be more than 500 bytes long")
@@ -33,4 +40,49 @@ func (m *Movie) Validate(v *validator.Validator) {
 	v.Check(len(m.Genres) >= 1, "genres", "must contain at least 1 genre")
 	v.Check(len(m.Genres) <= 5, "genres", "must not contain more than 5 genres")
 	v.Check(validator.Unique(m.Genres), "genres", "must not contain duplicate values")
+}
+
+// Inserts the Movie record (via its pointer) into DB using QueryRow() and Scan() methods
+func (m MovieModel) Insert(movie *Movie) error {
+	query := `
+		INSERT INTO movies (title, year, runtime, genres)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, created_at, version;`
+
+	// Uses pq.Array() adapter to take the Genres []string slice and convert it into pq.StringArray
+	// which implements the necessary interfaces to translate []string to and from a value that
+	// PostgreSQL understands.
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+
+	// QueryRow executes the SQL query using the variadic args
+	// Scan mutates the movie struct, namely adding the returned system-generated ID, CreatedAt, and Version values into it
+	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+}
+
+func (m MovieModel) Get(id int64) (*Movie, error) {
+	return nil, nil
+}
+
+func (m MovieModel) Update(movie *Movie) error {
+	return nil
+}
+
+func (m MovieModel) Delete(id int64) error {
+	return nil
+}
+
+func (m MockMovieModel) Insert(movie *Movie) error {
+	return nil
+}
+
+func (m MockMovieModel) Get(id int64) (*Movie, error) {
+	return nil, nil
+}
+
+func (m MockMovieModel) Update(movie *Movie) error {
+	return nil
+}
+
+func (m MockMovieModel) Delete(id int64) error {
+	return nil
 }

@@ -10,7 +10,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/mhrdini/greenlight/internal/data"
 )
 
 const version = "1.0.0"
@@ -30,16 +32,24 @@ type application struct {
 	config   config
 	infoLog  *log.Logger
 	errorLog *log.Logger
+	models   data.Models
 }
 
 func main() {
+
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime)
 
 	var cfg config
 
 	flag.IntVar(&cfg.port, "port", 4000, "Port number (4000)")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
+	if err := godotenv.Load("../../.env"); err != nil {
+		errorLog.Printf("No .env file found")
+	}
 	dbUser, dbPassword, dbName := os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME")
+
 	flag.StringVar(&cfg.db.dsn, "db-dsn", fmt.Sprintf("postgres://%v:%v@localhost/%v?sslmode=disable", dbUser, dbPassword, dbName), "PostgreSQL DSN")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-maxq-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
@@ -47,21 +57,19 @@ func main() {
 
 	flag.Parse()
 
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime)
-
 	db, err := openDB(cfg)
 	if err != nil {
 		errorLog.Fatal(err)
 	}
 
 	defer db.Close()
-	infoLog.Printf("database connection pool established")
+	infoLog.Printf("database connection pool established at DSN: %v", cfg.db.dsn)
 
 	app := &application{
 		config:   cfg,
 		infoLog:  infoLog,
 		errorLog: errorLog,
+		models:   data.NewModels(db),
 	}
 
 	srv := &http.Server{
