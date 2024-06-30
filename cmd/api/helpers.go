@@ -25,7 +25,6 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 }
 
 func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-
 	maxBytes := 1_048_576
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
