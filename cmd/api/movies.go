@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/mhrdini/greenlight/internal/data"
 	"github.com/mhrdini/greenlight/internal/validator"
@@ -104,6 +105,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// check headers to verify that movie version in DB matches expected version specified in header
+	if r.Header.Get("X-Expected-Version") != "" && strconv.FormatInt(int64(movie.Version), 32) != r.Header.Get("X-Expected-Version") {
+		app.editConflictResponse(w, r)
+		return
+	}
+
 	// using pointers for nil zero-value, to check for partial updates
 	var input struct {
 		Title   *string       `json:"title"`
@@ -118,6 +125,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// if there is a new value for the field, the field in the input will be non-nil
 	if input.Title != nil {
 		movie.Title = *input.Title
 	}
@@ -139,7 +147,12 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	err = app.models.Movies.Update(movie)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
