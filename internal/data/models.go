@@ -20,7 +20,7 @@ type MockModel[T any] interface {
 // Exportable Models struct to wrap all the accessible database models
 // Optional, but conveniently gives a single container to hold and represent all the DB models
 type Models struct {
-	Movies MockModel[Movie]
+	Movies MovieModel
 }
 
 // Uses the DB connection pool that was created upon start-up
@@ -30,8 +30,8 @@ func NewModels(db *sql.DB) Models {
 	}
 }
 
+// TODO: Make MockModels interface work with non-interface functions (e.g. GetAll in MovieModel but
+// not MockModel)
 func NewMockModels() Models {
-	return Models{
-		Movies: MockMovieModel{},
-	}
+	return Models{}
 }

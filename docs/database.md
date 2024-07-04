@@ -95,3 +95,31 @@ Connect to the database once inside `psql`. For example if the `DB_NAME` is "gre
 postgres=# \c greenlight
 You are now connected to database "greenlight" as user "postgres".
 ```
+
+## PostgreSQL Commands
+
+### Full-Text Search
+
+On a `title` field, using a `WHERE` clause:
+
+```sql
+...
+WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+...
+```
+
+#### Explanation
+
+- `to_tsvector('simple', title)` function takes a movie title and splits it into lexemes
+- `simple` configuration means that lexemes are just lowercase version of the words in the title
+
+**Example:** "The Breakfast Club" would be split into the lexemes `'breakfast'` `'club'` `'the'`.
+
+- `plainto_tsquery('simple', $1)` function takes a search value and turns it into a formatted query term that PostgreSQL full-text search can understand
+- using the `simple` configuration, it normalises the search value, strips any special charactes,
+  and inserts the `and` operator `&` between the words
+
+**Example:** "The Club" would results in the query term `'the' & 'club'`.
+
+- `@@` operator is the matches operator, used to check whether the generated query term matches the lexemes
+-
