@@ -122,4 +122,15 @@ WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 **Example:** "The Club" would results in the query term `'the' & 'club'`.
 
 - `@@` operator is the matches operator, used to check whether the generated query term matches the lexemes
--
+
+### Pagination
+
+- `LIMIT` to set maximum number of records that an SQL query returns
+- `OFFSET` to 'skip' a specific number of rows before starting to return records from the query
+
+Both written after `ORDER BY` clause:
+
+```sql
+ORDER BY ...
+LIMIT 5 OFFSET 10
+```
